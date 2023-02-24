@@ -65,4 +65,4 @@ lazy val `customer-service` = (project in file("customer-service"))
     scalapb.gen(grpc = true) -> (Compile / sourceManaged).value,
     scalapb.zio_grpc.ZioCodeGenerator -> (Compile / sourceManaged).value
   ))
-  .dependsOn(`document-api-grpc`, `document-service`)
+  .dependsOn(`document-api-grpc`)
