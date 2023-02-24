@@ -20,7 +20,7 @@ lazy val root = (project in file("."))
     testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
   )
 
-lazy val `document-api-grpc` = (project in file("document-api-grpc"))
+lazy val `document-api-grpc` = (project in file("document-service/document-api-grpc"))
   .settings(
     libraryDependencies ++= Seq(
       "io.grpc" % "grpc-netty" % "1.53.0",

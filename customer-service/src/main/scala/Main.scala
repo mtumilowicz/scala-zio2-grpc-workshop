@@ -1,4 +1,5 @@
-import client.{Document, DocumentClientService, DocumentId, DocumentRepository}
+import customer.{CustomerId, CustomerService}
+import document.domain.{Document, DocumentId, DocumentRepository, DocumentService}
 import zio.Console.printLine
 import zio.ZIO
 import zio.stream.ZStream
@@ -10,7 +11,7 @@ object Main extends zio.ZIOAppDefault {
     println(s"[unary] create document request $request")
 
     for {
-      reply <- ZIO.serviceWithZIO[DocumentClientService](_.createDocument(request))
+      reply <- ZIO.serviceWithZIO[CustomerService](_.createDocument(CustomerId("1"), request))
       _ <- printLine(s"[unary] create document reply $reply")
     } yield reply
   }
@@ -21,18 +22,11 @@ object Main extends zio.ZIOAppDefault {
     )
 
     val replyStream = for {
-      reply <- ZStream.serviceWithStream[DocumentClientService](_.getDocuments(
-        ZStream.fromIterable(
-          documents.map(d => DocumentId(d._1))
-        ).tap { r =>
-          printLine(s"[bi-stream] document request $r").orDie
-        }
-      ))
+      reply <- ZStream.serviceWithStream[CustomerService](_.findAllDocuments(CustomerId("1")))
     } yield reply
 
     replyStream.foreach(r => printLine(s"[bi-stream] document reply $r"))
   }
-
 
   def myAppLogic =
     for {
@@ -42,8 +36,9 @@ object Main extends zio.ZIOAppDefault {
 
   final def run =
     myAppLogic.provide(
-      DocumentClientService.layer,
+      CustomerService.layer,
       DocumentRepository.grpc,
-      DocumentRepository.clientLayer
+      DocumentRepository.grpcClient,
+      DocumentService.layer,
     )
 }
