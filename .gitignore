@@ -6,3 +6,5 @@
 .idea
 /document-api-grpc/project/target
 /document-api-grpc/target
+/document-service/project/target
+/document-service/target
