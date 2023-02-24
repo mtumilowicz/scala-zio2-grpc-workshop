@@ -4,8 +4,8 @@
 /target/
 .bsp
 .idea
-/document-api-grpc/project/target
-/document-api-grpc/target
+document-service/document-api-grpc/project/target
+document-service/document-api-grpc/target
 /document-service/project/target
 /document-service/target
 /customer-service/project/target
