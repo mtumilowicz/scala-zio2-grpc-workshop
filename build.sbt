@@ -18,4 +18,19 @@ lazy val root = (project in file("."))
       "dev.zio" %% "zio-test" % "2.0.9" % Test
     ),
     testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
+  ).dependsOn(`document-api-grpc`)
+
+lazy val `document-api-grpc` = (project in file("document-api-grpc"))
+  .settings(
+    libraryDependencies ++= Seq(
+      "io.grpc" % "grpc-netty" % "1.53.0",
+      "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapb.compiler.Version.scalapbVersion,
+      "dev.zio" %% "zio" % "2.0.9",
+      "dev.zio" %% "zio-test" % "2.0.9" % Test
+    ),
+    testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
   )
+  .settings(Compile / PB.targets := Seq(
+    scalapb.gen(grpc = true) -> (Compile / sourceManaged).value,
+    scalapb.zio_grpc.ZioCodeGenerator -> (Compile / sourceManaged).value
+  ))
