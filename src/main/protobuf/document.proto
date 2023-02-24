@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "io.grpc.document";
+option java_outer_classname = "DocumentProto";
+
+package document;
+
+service DocumentGrpcService {
+  rpc createDocument(NewDocumentApiInput) returns (NewDocumentApiInput);
+  rpc getDocuments(stream DocumentIdApiInput) returns (stream DocumentApiOutput);
+}
+
+message DocumentIdApiInput {
+  string id = 1;
+}
+
+message DocumentApiOutput {
+  string id = 1;
+  string payload = 2;
+}
+
+message NewDocumentApiInput {
+  string id = 1;
+  string payload = 2;
+}
+
+message NewDocumentCreatedApiOutput {
+  string id = 1;
+}
