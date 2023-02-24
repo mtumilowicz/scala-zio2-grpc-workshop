@@ -4,3 +4,5 @@
 /target/
 .bsp
 .idea
+/document-api-grpc/project/target
+/document-api-grpc/target
