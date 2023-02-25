@@ -11,7 +11,7 @@ case class DocumentServiceContainer(port: Int, underlying: GenericContainer) ext
 
 object DocumentServiceContainer {
   private val imageName   = "document-service:latest"
-  private val exposedPort = 8080
+  private val exposedPort = 9000
 
   case object Def
     extends GenericContainer.Def[DocumentServiceContainer](

@@ -55,7 +55,7 @@ lazy val `document-service` = (project in file("document-service"))
   .settings(
     Docker / packageName := "document-service",
     dockerBaseImage := "openjdk:11-jre-slim-buster",
-    dockerExposedPorts ++= Seq(8080),
+    dockerExposedPorts ++= Seq(9000),
     dockerUpdateLatest := true,
   )
   .dependsOn(`document-api-grpc`)
