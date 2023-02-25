@@ -2,10 +2,10 @@ package document.infrastructure
 
 import document.domain
 import document.domain.{Document, DocumentId, DocumentRepository}
-import io.grpc.document.document.{DocumentIdApiInput, NewDocumentApiInput}
 import io.grpc.document.document.ZioDocument.DocumentGrpcServiceClient
+import io.grpc.document.document.{DocumentIdApiInput, NewDocumentApiInput}
 import zio.Task
-import zio.stream.{UStream, Stream}
+import zio.stream.{Stream, UStream}
 
 case class DocumentGrpcRepository(client: DocumentGrpcServiceClient) extends DocumentRepository {
   override def createDocument(document: Document): Task[Document] =

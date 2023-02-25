@@ -1,6 +1,6 @@
 package customer
 
-import document.domain.{Document, DocumentId, DocumentRepository, DocumentService}
+import document.domain.{Document, DocumentId, DocumentService}
 import zio.stream.ZStream
 import zio.{Task, URLayer, ZIO, ZLayer, stream}
 

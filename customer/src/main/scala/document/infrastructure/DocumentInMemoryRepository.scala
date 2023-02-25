@@ -1,7 +1,7 @@
 package document.infrastructure
 
 import document.domain.{Document, DocumentId, DocumentRepository}
-import zio.stream.{UStream, Stream}
+import zio.stream.{Stream, UStream}
 import zio.{Ref, Task, ZIO}
 
 case class DocumentInMemoryRepository(storage: Ref[Map[DocumentId, Document]]) extends DocumentRepository {

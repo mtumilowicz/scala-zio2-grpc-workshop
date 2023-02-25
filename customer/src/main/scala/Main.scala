@@ -1,9 +1,8 @@
 import customer.{CustomerAppConfig, CustomerId, CustomerService}
-import document.domain.{Document, DocumentId, DocumentRepository, DocumentService}
+import document.domain.{Document, DocumentId, DocumentService}
 import document.infrastructure.{DocumentGrpcClient, DocumentRepositoryConfig}
-import zio.Console.printLine
-import zio.{ZIO, ZLayer}
-import zio.stream.{ZSink, ZStream}
+import zio.ZIO
+import zio.stream.ZSink
 
 object Main extends zio.ZIOAppDefault {
   def createAndGet =

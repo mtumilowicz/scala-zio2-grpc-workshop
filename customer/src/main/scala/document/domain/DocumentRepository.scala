@@ -1,10 +1,6 @@
 package document.domain
 
-import document.infrastructure.{DocumentGrpcRepository, DocumentInMemoryRepository}
-import io.grpc.ManagedChannelBuilder
-import io.grpc.document.document.ZioDocument.DocumentGrpcServiceClient
-import scalapb.zio_grpc.ZManagedChannel
-import zio.{Layer, Ref, Task, ULayer, ZIO, ZLayer}
+import zio.Task
 import zio.stream.{Stream, UStream}
 
 trait DocumentRepository {

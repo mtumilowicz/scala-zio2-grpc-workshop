@@ -1,10 +1,10 @@
 package customer
 
 import document.infrastructure.DocumentServiceContainer
-import zio.{Layer, ZLayer}
-import zio.config.{PropertyTreePath, ReadError, toKebabCase}
 import zio.config.magnolia.descriptor
 import zio.config.typesafe.TypesafeConfigSource
+import zio.config.{PropertyTreePath, ReadError, toKebabCase}
+import zio.{Layer, ZLayer}
 
 case class CustomerAppConfig(
                               documentGrpcHost: String,
