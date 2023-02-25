@@ -21,7 +21,7 @@ lazy val root = (project in file("."))
     testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
   )
 
-lazy val `document-api-grpc` = (project in file("document-service/document-api-grpc"))
+lazy val `document-api-grpc` = (project in file("document/document-api-grpc"))
   .settings(
     libraryDependencies ++= Seq(
       "io.grpc" % "grpc-netty" % "1.53.0",
@@ -36,7 +36,7 @@ lazy val `document-api-grpc` = (project in file("document-service/document-api-g
     scalapb.zio_grpc.ZioCodeGenerator -> (Compile / sourceManaged).value
   ))
 
-lazy val `document-service` = (project in file("document-service"))
+lazy val `document` = (project in file("document"))
   .enablePlugins(DockerPlugin)
   .enablePlugins(AshScriptPlugin)
   .settings(
@@ -60,7 +60,7 @@ lazy val `document-service` = (project in file("document-service"))
   )
   .dependsOn(`document-api-grpc`)
 
-lazy val `customer-service` = (project in file("customer-service"))
+lazy val `customer` = (project in file("customer"))
   .settings(
     libraryDependencies ++= Seq(
       "io.grpc" % "grpc-netty" % "1.53.0",
