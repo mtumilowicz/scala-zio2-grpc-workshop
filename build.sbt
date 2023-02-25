@@ -66,6 +66,9 @@ lazy val `customer-service` = (project in file("customer-service"))
       "io.grpc" % "grpc-netty" % "1.53.0",
       "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapb.compiler.Version.scalapbVersion,
       "dev.zio" %% "zio" % "2.0.9",
+      "dev.zio" %% "zio-config" % "3.0.7",
+      "dev.zio" %% "zio-config-magnolia" % "3.0.7",
+      "dev.zio" %% "zio-config-typesafe" % "3.0.7",
       "com.dimafeng" %% "testcontainers-scala-scalatest" % "0.40.12",
       "dev.zio" %% "zio-test" % "2.0.9" % Test
     ),

@@ -22,7 +22,7 @@ object CustomerServiceTest extends ZIOSpecDefault {
         result <- customerService.findAllDocuments(CustomerId("1")).runCollect
       } yield assertTrue(result.size == 1)
     }
-  ).provideSome[Scope with DocumentGrpcClient.Config](
+  ).provideSome[Scope with CustomerAppConfig](
     CustomerService.layer,
     DocumentRepositoryConfig.grpc,
     DocumentGrpcClient.live,
@@ -33,6 +33,6 @@ object CustomerServiceTest extends ZIOSpecDefault {
   val testGrpcConfig = ZLayer.fromZIO {
     for {
       orderTestContainer <- ZIO.service[DocumentServiceContainer]
-    } yield DocumentGrpcClient.Config(orderTestContainer.externalPort)
+    } yield CustomerAppConfig.from(orderTestContainer)
   }
 }

@@ -1,4 +1,4 @@
-import customer.{CustomerId, CustomerService}
+import customer.{CustomerAppConfig, CustomerId, CustomerService}
 import document.domain.{Document, DocumentId, DocumentRepository, DocumentService}
 import document.infrastructure.{DocumentGrpcClient, DocumentRepositoryConfig}
 import zio.Console.printLine
@@ -41,6 +41,6 @@ object Main extends zio.ZIOAppDefault {
       DocumentRepositoryConfig.grpc,
       DocumentGrpcClient.live,
       DocumentService.layer,
-      ZLayer.succeed(DocumentGrpcClient.Config(8080))
+      CustomerAppConfig.layer
     )
 }
