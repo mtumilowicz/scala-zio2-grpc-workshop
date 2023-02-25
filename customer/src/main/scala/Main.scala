@@ -3,40 +3,18 @@ import document.domain.{Document, DocumentId, DocumentRepository, DocumentServic
 import document.infrastructure.{DocumentGrpcClient, DocumentRepositoryConfig}
 import zio.Console.printLine
 import zio.{ZIO, ZLayer}
-import zio.stream.ZStream
+import zio.stream.{ZSink, ZStream}
 
 object Main extends zio.ZIOAppDefault {
-
-  def createDocument() = {
-    val request = Document(DocumentId("1"), "blob1")
-    println(s"[unary] create document request $request")
-
+  def createAndGet =
     for {
-      reply <- ZIO.serviceWithZIO[CustomerService](_.createDocument(CustomerId("1"), request))
-      _ <- printLine(s"[unary] create document reply $reply")
-    } yield reply
-  }
-
-  def streamDocuments() = {
-    val documents = List(
-      ("1", "blob1"),
-    )
-
-    val replyStream = for {
-      reply <- ZStream.serviceWithStream[CustomerService](_.findAllDocuments(CustomerId("1")))
-    } yield reply
-
-    replyStream.foreach(r => printLine(s"[bi-stream] document reply $r"))
-  }
-
-  def myAppLogic =
-    for {
-      _ <- createDocument()
-      _ <- streamDocuments()
-    } yield ()
+      customerService <- ZIO.service[CustomerService]
+      _ <- customerService.createDocument(CustomerId("1"), Document(DocumentId("1"), "content"))
+      result <- customerService.findAllDocuments(CustomerId("1")).run(ZSink.foreach(d => zio.Console.printLine(d)))
+    } yield result
 
   final def run =
-    myAppLogic.provide(
+    createAndGet.provide(
       CustomerService.layer,
       DocumentRepositoryConfig.grpc,
       DocumentGrpcClient.live,
