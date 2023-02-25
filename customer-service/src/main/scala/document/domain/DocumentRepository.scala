@@ -16,7 +16,7 @@ object DocumentRepository {
   val grpcClient: Layer[Throwable, DocumentGrpcServiceClient] =
     DocumentGrpcServiceClient.live(
       ZManagedChannel(
-        ManagedChannelBuilder.forAddress("localhost", 9000).usePlaintext()
+        ManagedChannelBuilder.forAddress("localhost", 8080).usePlaintext()
       )
     )
   val grpc: ZLayer[DocumentGrpcServiceClient, Throwable, DocumentRepository] = ZLayer.fromZIO {
