@@ -1,7 +1,7 @@
 package customer
 
 import document.domain.{Document, DocumentId, DocumentRepository, DocumentService}
-import document.infrastructure.DocumentServiceContainer
+import document.infrastructure.{DocumentGrpcClient, DocumentRepositoryConfig, DocumentServiceContainer}
 import zio.stream.ZStream
 import zio.{Scope, ZIO, ZLayer}
 import zio.test.{Spec, TestEnvironment, ZIOSpecAbstract, ZIOSpecDefault, assertTrue}
@@ -22,10 +22,17 @@ object CustomerServiceTest extends ZIOSpecDefault {
         result <- customerService.findAllDocuments(CustomerId("1")).runCollect
       } yield assertTrue(result.size == 1)
     }
-  ).provide(
+  ).provideSome[Scope with DocumentGrpcClient.Config](
     CustomerService.layer,
-    DocumentRepository.grpc,
-    DocumentRepository.grpcClient,
-    DocumentService.layer)
-    .provideShared(DocumentServiceContainer.live)
+    DocumentRepositoryConfig.grpc,
+    DocumentGrpcClient.live,
+    DocumentService.layer
+  )
+    .provideSomeShared(DocumentServiceContainer.live, testGrpcConfig)
+
+  val testGrpcConfig = ZLayer.fromZIO {
+    for {
+      orderTestContainer <- ZIO.service[DocumentServiceContainer]
+    } yield DocumentGrpcClient.Config(orderTestContainer.externalPort)
+  }
 }

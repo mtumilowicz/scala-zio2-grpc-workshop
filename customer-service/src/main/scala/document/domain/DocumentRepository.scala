@@ -9,25 +9,6 @@ import zio.stream.{Stream, UStream}
 
 trait DocumentRepository {
   def createDocument(document: Document): Task[Document]
+
   def getDocuments(request: UStream[DocumentId]): Stream[Throwable, Document]
-}
-
-object DocumentRepository {
-  val grpcClient: Layer[Throwable, DocumentGrpcServiceClient] =
-    DocumentGrpcServiceClient.live(
-      ZManagedChannel(
-        ManagedChannelBuilder.forAddress("localhost", 8080).usePlaintext()
-      )
-    )
-  val grpc: ZLayer[DocumentGrpcServiceClient, Throwable, DocumentRepository] = ZLayer.fromZIO {
-    for {
-      client <- ZIO.service[DocumentGrpcServiceClient]
-    } yield DocumentGrpcRepository(client)
-  }
-
-  val inMemory: ULayer[DocumentRepository] = ZLayer.fromZIO {
-    for {
-      map <- Ref.make(Map.empty[DocumentId, Document])
-    } yield DocumentInMemoryRepository(map)
-  }
 }

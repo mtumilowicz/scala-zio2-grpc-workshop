@@ -1,7 +1,8 @@
 import customer.{CustomerId, CustomerService}
 import document.domain.{Document, DocumentId, DocumentRepository, DocumentService}
+import document.infrastructure.{DocumentGrpcClient, DocumentRepositoryConfig}
 import zio.Console.printLine
-import zio.ZIO
+import zio.{ZIO, ZLayer}
 import zio.stream.ZStream
 
 object Main extends zio.ZIOAppDefault {
@@ -37,8 +38,9 @@ object Main extends zio.ZIOAppDefault {
   final def run =
     myAppLogic.provide(
       CustomerService.layer,
-      DocumentRepository.grpc,
-      DocumentRepository.grpcClient,
+      DocumentRepositoryConfig.grpc,
+      DocumentGrpcClient.live,
       DocumentService.layer,
+      ZLayer.succeed(DocumentGrpcClient.Config(8080))
     )
 }
