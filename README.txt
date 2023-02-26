@@ -17,6 +17,7 @@
     * https://cloud.google.com/apis/design/proto3
     * https://learn.microsoft.com/en-us/dotnet/architecture/grpc-for-wcf-developers/protobuf-reserved
     * https://codethecoffee.github.io/proto-cheatsheet/
+    * https://github.com/grpc/grpc-java/issues/515#issuecomment-110023227
 
 ## preface
 * this project, for the sake of simplicity - has very basic setup
@@ -121,6 +122,9 @@
     * if the message is defined in another proto file, you have to use import `"myproject/other_protos.proto";`
 * updating messages
     * very simple to update message types without breaking any of your existing code
+        * old code will read new messages without issues, ignoring any newly added fields
+            * fields that were deleted will have their default value
+            * deleted repeated fields will be empty
     * rule: don’t change the field numbers for any existing fields
     * fields can be removed, as long as the field number is not used again in your updated message type
         * problem: future users can reuse the field number when making their own updates to the type
@@ -145,87 +149,117 @@
         message Open { ... }
         ```
 * options
-    * example
+    * example - most popular ones
         ```
-
+        option java_multiple_files = true;
+        option java_package = "com.example.tutorial.protos";
+        option java_outer_classname = "AddressBookProtos";
         ```
-    * Individual declarations in a .proto file can be annotated with a number of options.
-    * Here are a few of the most commonly used options:
-        * java_package (file option): The package you want to use for your generated Java/Kotlin classes. If no explicit java_package option is given in the .proto file, then by default the proto package (specified using the “package” keyword in the .proto file) will be used. However, proto packages generally do not make good Java packages since proto packages are not expected to start with reverse domain names. If not generating Java or Kotlin code, this option has no effect.
-
-          option java_package = "com.example.foo";
-        * java_outer_classname (file option): The class name (and hence the file name) for the wrapper Java class you want to generate. If no explicit java_outer_classname is specified in the .proto file, the class name will be constructed by converting the .proto file name to camel-case (so foo_bar.proto becomes FooBar.java). If the java_multiple_files option is disabled, then all other classes/enums/etc. generated for the .proto file will be generated within this outer wrapper Java class as nested classes/enums/etc. If not generating Java code, this option has no effect.
-
-          option java_outer_classname = "Ponycopter";
-        * java_multiple_files (file option): If false, only a single .java file will be generated for this .proto file, and all the Java classes/enums/etc. generated for the top-level messages, services, and enumerations will be nested inside of an outer class (see java_outer_classname). If true, separate .java files will be generated for each of the Java classes/enums/etc. generated for the top-level messages, services, and enumerations, and the wrapper Java class generated for this .proto file won’t contain any nested classes/enums/etc. This is a Boolean option which defaults to false. If not generating Java code, this option has no effect.
-
-          option java_multiple_files = true;
-* As long as you follow some simple practices when updating .proto definitions, old code will read new messages without issues, ignoring any newly added fields.
-    * To the old code, fields that were deleted will have their default value, and deleted repeated fields will be empty.
+    * `java_package`
+        * specifies in what Java package name your generated classes should live
+        * default: matches the package name given by the package declaration
+            * usually aren’t appropriate Java package names (they usually don’t start with a domain name)
+        * even if specified - you should still define a normal package to avoid name collisions in the
+        Protocol Buffers name space as well as in non-Java languages
+    * `java_outer_classname`
+        * defines the class name of the wrapper class which will represent this file
+        * default: file name to upper camel case
+            * example, `my_proto.proto` -> `MyProto`
+    * `java_multiple_files = true`
+        * enables generating a separate .java file for each generated class
+        * legacy: generating a single .java file for the wrapper class, using the wrapper class
+        as an outer class, and nesting all the other classes inside the wrapper class
 
 ## grpc
-* https://github.com/grpc/grpc-java/issues/515#issuecomment-110023227
-    * Status is for a canonical status used by all gRPC servers and will only rarely be added to. I think you saw the comment "If new codes are added over time they must choose a numerical value that does not collide with any previously used value." This comment is not referring to applications adding codes, but gRPC as a whole adding new codes. The current set of codes should be able to appropriately describe almost any application status in a generic way.
+* gRPC = g Remote Procedure Call
+* overview
+    * client application can directly call a method on a server application on a different machine
+    as if it were a local object
+        * making easier to create distributed applications and services
+    * based around the idea of defining a service with methods, parameters and return types
+        * example
+            ```
+            service Greeter {
+              rpc SayHello (HelloRequest) returns (HelloReply) {}
+            }
 
-      For custom status information, use Metadata.
-* gRPC uses HTTP/2 protocol which empowers its features such as: bidirectional binary communication, compression, flow control, compiled and strongly typed,  along with others.
-* In gRPC, a client application can directly call a method on a server application on a different machine as if it were a local object, making it easier for you to create distributed applications and services.
-    * As in many RPC systems, gRPC is based around the idea of defining a service, specifying the methods that can be called remotely with their parameters and return types. On the server side, the server implements this interface and runs a gRPC server to handle client calls. On the client side, the client has a stub (referred to as just a client in some languages) that provides the same methods as the server.
-    * for example, you can easily create a gRPC server in Java with clients in Go, Python, or Ruby.
-* By default, gRPC uses Protocol Buffers
-    * The first step when working with protocol buffers is to define the structure for the data you want to serialize in a proto file: this is an ordinary text file with a .proto extension
-        message Person {
-          string name = 1;
-          int32 id = 2;
-          bool has_ponycopter = 3;
-        }
-    * Then, once you’ve specified your data structures, you use the protocol buffer compiler protoc to generate data access classes in your preferred language(s) from your proto definition.
-    * You define gRPC services in ordinary proto files, with RPC method parameters and return types specified as protocol buffer messages:
-        // The greeter service definition.
-        service Greeter {
-          // Sends a greeting
-          rpc SayHello (HelloRequest) returns (HelloReply) {}
-        }
+            message HelloRequest {
+              string name = 1;
+            }
 
-        // The request message containing the user's name.
-        message HelloRequest {
-          string name = 1;
-        }
-
-        // The response message containing the greetings
-        message HelloReply {
-          string message = 1;
-        }
-    * gRPC uses protoc with a special gRPC plugin to generate code from your proto file: you get generated gRPC client and server code, as well as the regular protocol buffer code for populating, serializing, and retrieving your message types.
-* gRPC lets you define four kinds of service method:
-    * Unary RPCs where the client sends a single request to the server and gets a single response back, just like a normal function call.
-
-      rpc SayHello(HelloRequest) returns (HelloResponse);
-    * Server streaming RPCs where the client sends a request to the server and gets a stream to read a sequence of messages back. The client reads from the returned stream until there are no more messages. gRPC guarantees message ordering within an individual RPC call.
-
-      rpc LotsOfReplies(HelloRequest) returns (stream HelloResponse);
-    * Client streaming RPCs where the client writes a sequence of messages and sends them to the server, again using a provided stream. Once the client has finished writing the messages, it waits for the server to read them and return its response. Again gRPC guarantees message ordering within an individual RPC call.
-
-      rpc LotsOfGreetings(stream HelloRequest) returns (HelloResponse);
-    * Bidirectional streaming RPCs where both sides send a sequence of messages using a read-write stream. The two streams operate independently, so clients and servers can read and write in whatever order they like: for example, the server could wait to receive all the client messages before writing its responses, or it could alternately read a message then write a message, or some other combination of reads and writes. The order of messages in each stream is preserved.
-
-      rpc BidiHello(stream HelloRequest) returns (stream HelloResponse);
-* Starting from a service definition in a .proto file, gRPC provides protocol buffer compiler plugins that generate client- and server-side code. gRPC users typically call these APIs on the client side and implement the corresponding API on the server side.
-    * On the server side, the server implements the methods declared by the service and runs a gRPC server to handle client calls. The gRPC infrastructure decodes incoming requests, executes service methods, and encodes service responses.
-    * On the client side, the client has a local object known as stub (for some languages, the preferred term is client) that implements the same methods as the service. The client can then just call those methods on the local object, and the methods wrap the parameters for the call in the appropriate protocol buffer message type, send the requests to the server, and return the server’s protocol buffer responses.
-* In gRPC, both the client and server make independent and local determinations of the success of the call, and their conclusions may not match.
+            message HelloReply {
+              string message = 1;
+            }
+            ```
+        * on the server side
+            * server implements this interface and runs a gRPC server to handle client calls
+                * gRPC infrastructure decodes incoming requests, executes service methods, and encodes service responses
+        * on the client side
+            * the client has a stub (referred to as just a client in some languages) that
+            provides the same methods as the server
+                * client can then just call those methods on the local object (stub)
+                    * methods wrap the parameters for the call in the appropriate protocol buffer message type
+                    send the requests to the server, and return the server’s protocol buffer responses
+* gRPC library takes care of communication, marshalling, unmarshalling, and deadline enforcement
+* uses HTTP/2
+* by default, gRPC uses Protocol Buffers
+    * gRPC uses protocol buffer compiler protoc with a special gRPC plugin to generate code from your proto file
+        * you get generated gRPC client and server code
+        * as well as the regular protocol buffer code for populating, serializing, and retrieving your message types.
+* four kinds of service method:
+    * Unary
+        * example
+            ```
+            rpc SayHello(HelloRequest) returns (HelloResponse);
+            ```
+        * just like a normal function call
+            * client sends a single request to the server and gets a single response back
+    * Server streaming
+        * example
+            ```
+            rpc LotsOfReplies(HelloRequest) returns (stream HelloResponse);
+            ```
+        * client sends a request to the server and gets a stream to read a sequence of messages back
+            * client reads from the returned stream until there are no more messages
+        * gRPC guarantees message ordering within an individual RPC call.
+    * Client streaming
+        * example
+            ```
+            rpc LotsOfGreetings(stream HelloRequest) returns (HelloResponse);
+            ```
+        * client writes a sequence of messages and sends them to the server (using a provided stream)
+            * once the client has finished writing the messages, it waits for the server to read them and return its response
+        * gRPC guarantees message ordering within an individual RPC call
+    * Bidirectional streaming
+        * example
+            ```
+            rpc BidiHello(stream HelloRequest) returns (stream HelloResponse);
+            ```
+        * both sides send a sequence of messages using a read-write stream
+        * two streams operate independently
+            * clients and servers can read and write in whatever order they like
+        * order of messages in each stream is preserved.
+* status
+    * predefined - canonical status used by all gRPC servers and will only rarely be added to
+        ```
+        OK	        0	Not an error; returned on success.
+        CANCELLED	1	The operation was cancelled, typically by the caller.
+        // others
+        ```
+    * current set of codes should be able to appropriately describe almost any application status in a generic way
+    * for custom status information, use Metadata
+* both the client and server make independent and local determinations of the success of the call, and their conclusions may not match
+    * RPC that finished successfully on the server side can fail on the client side
+    * example: the server can send the response, but the reply can arrive at the client after their deadline has expired
 * Metadata
     * Metadata is information about a particular RPC call (such as authentication details) in the form of a list of key-value pairs, where the keys are strings and the values are typically strings, but can be binary data.
-
-* in gRPC, both the client and server make their own independent and local determination about whether the remote procedure call (RPC) was successful. This means their conclusions may not match! An RPC that finished successfully on the server side can fail on the client side. For example, the server can send the response, but the reply can arrive at the client after their deadline has expired. The client will already have terminated with the status error DEADLINE_EXCEEDED. This should be checked for and managed at the application level.
-* When you use gRPC, the gRPC library takes care of communication, marshalling, unmarshalling, and deadline enforcement.
-* With gRPC we can define our service once in a .proto file and generate clients and servers in any of gRPC’s supported languages, which in turn can be run in environments ranging from servers inside a large data center to your own tablet — all the complexity of communication between different languages and environments is handled for you by gRPC.
-* When you use a gRPC it is a very important to set deadlines.
-    *  In gRPC, deadlines are absolute timestamps that tell our system when the response of an RPC call is no longer needed
-    * The deadline is sent to the server, and the computation is automatically interrupted when the deadline is exceeded. The client call automatically ends with a Status.DEADLINE_EXCEEDED error.
-    * When you don't specify a deadline, client requests never timeout
-    * Deadlines allow gRPC clients to specify how long they are willing to wait for an RPC to complete before the RPC is terminated with the error DEADLINE_EXCEEDED
-    * services should specify the longest default deadline they technically support, and clients should wait until the response is no longer useful to them
+* deadlines
+    * are absolute timestamps that tell our system when the response of an RPC call is no longer needed
+    * is sent to the server
+        * computation is automatically interrupted when the deadline is exceeded
+            * client call automatically ends with a `Status.DEADLINE_EXCEEDED` error
+    * allow gRPC clients to specify how long they are willing to wait for an RPC to complete
+        * when you don't specify a deadline, client requests never timeout
 
 ## zio-grpc
 * ZIO-gRPC lets you write purely functional gRPC servers and clients
