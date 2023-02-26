@@ -1,11 +1,11 @@
 package customer
 
 import document.domain.{Document, DocumentId, DocumentService}
-import document.infrastructure.{DocumentGrpcClient, DocumentRepositoryConfig, DocumentServiceContainer}
+import document.infrastructure.DocumentRepositoryConfig
 import zio.test.{Spec, TestEnvironment, ZIOSpecDefault, assertTrue}
-import zio.{Scope, ZIO, ZLayer}
+import zio.{Scope, ZIO}
 
-object CustomerServiceTest extends ZIOSpecDefault {
+object CustomerServiceInMemoryTest extends ZIOSpecDefault {
   override def spec: Spec[TestEnvironment with Scope, Any] = suite("crud")(
     test("create and get") {
       for {
@@ -14,16 +14,10 @@ object CustomerServiceTest extends ZIOSpecDefault {
         result <- customerService.findAllDocuments(CustomerId("1")).runCollect
       } yield assertTrue(result.size == 1)
     }
-  ).provideSome[CustomerAppConfig](
+  ).provide(
     CustomerService.layer,
-    DocumentRepositoryConfig.grpc,
-    DocumentGrpcClient.live,
+    DocumentRepositoryConfig.inMemory,
     DocumentService.layer
-  ).provideSomeShared(DocumentServiceContainer.live, testGrpcConfig)
+  )
 
-  val testGrpcConfig = ZLayer.fromZIO {
-    for {
-      orderTestContainer <- ZIO.service[DocumentServiceContainer]
-    } yield CustomerAppConfig.from(orderTestContainer)
-  }
 }

@@ -1,14 +1,13 @@
 package customer
 
-import document.infrastructure.DocumentServiceContainer
 import zio.config.magnolia.descriptor
 import zio.config.typesafe.TypesafeConfigSource
 import zio.config.{PropertyTreePath, ReadError, toKebabCase}
 import zio.{Layer, ZLayer}
 
 case class CustomerAppConfig(
-                              documentGrpcHost: String,
-                              documentGrpcPort: Int,
+  documentGrpcHost: String,
+  documentGrpcPort: Int,
 )
 
 object CustomerAppConfig {
@@ -25,12 +24,6 @@ object CustomerAppConfig {
           .mapKey(keyMapper)
       }
     }
-
-  def from(documentServiceContainer: DocumentServiceContainer): CustomerAppConfig =
-    CustomerAppConfig(
-      documentServiceContainer.host,
-      documentServiceContainer.externalPort,
-    )
 
   private lazy val keyMapper = toKebabCase
 }
