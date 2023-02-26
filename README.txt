@@ -1,4 +1,6 @@
 
+# scala-zio2-grpc-workshop
+
 * references
     * https://github.com/scalapb/zio-grpc
     * https://zio.dev/ecosystem/community/zio-grpc/
@@ -10,56 +12,102 @@
     * https://grpc.io/docs/
     * https://protobuf.dev/overview/
     * https://scalac.io/blog/grpc-vs-rest-vs-graphql/
+    * https://groups.google.com/g/protobuf/c/kF0IDYzcSsE?pli=1
+    * https://stackoverflow.com/questions/69441101/is-it-a-good-practice-in-protobuf3-using-optional-to-check-nullability
+    * https://cloud.google.com/apis/design/proto3
+    * https://learn.microsoft.com/en-us/dotnet/architecture/grpc-for-wcf-developers/protobuf-reserved
+    * https://codethecoffee.github.io/proto-cheatsheet/
 
-* https://github.com/grpc/grpc-java/issues/515#issuecomment-110023227
-    * Status is for a canonical status used by all gRPC servers and will only rarely be added to. I think you saw the comment "If new codes are added over time they must choose a numerical value that does not collide with any previously used value." This comment is not referring to applications adding codes, but gRPC as a whole adding new codes. The current set of codes should be able to appropriately describe almost any application status in a generic way.
-
-      For custom status information, use Metadata.
-
-* show that streaming is possible
-    * .run(ZSink.foreach(d => zio.Console.printLine(d)))
-    *   override def getDocuments(request: stream.Stream[Status, DocumentIdApiInput]): stream.Stream[Status, DocumentApiOutput] = {
-          ZStream.from(DocumentApiOutput("2", "content2"))
-            .repeat(Schedule.spaced(2.seconds))
-        }
-* https://github.com/mtumilowicz/scala-zio2-test-sharing-resources-testcontainers-workshop
+## preface
+* this project, for the sake of simplicity - has very basic setup
+    * it is worth to take a look here: https://github.com/mtumilowicz/scala-zio2-test-sharing-resources-testcontainers-workshop
+        * correct setup of multimodule scala project
+* goals of these workshops
+    * introduction into
+        * protocol buffers
+        * grpc
+    * knowledge of scala ecosystem
+        * zio-grpc
+        * scalaPB
+* workshop plan
+    1. implement method to delete document
+    1. show that streaming is working
+        ```
+        ZStream.from(DocumentApiOutput(...)).repeat(Schedule.spaced(2.seconds))
+        ```
 
 ## protocol buffer
-* Protocol Buffers are a language-neutral, platform-neutral extensible mechanism for serializing structured data.
-* It’s like JSON, except it’s smaller and faster, and it generates native language bindings.
-* You define how you want your data to be structured once, then you can use special generated source code to easily write and read your structured data to and from a variety of data streams and using a variety of languages.
-* Protocol buffers are a combination of the definition language (created in .proto files), the code that the proto compiler generates to interface with data, language-specific runtime libraries, and the serialization format for data that is written to a file (or sent across a network connection).
-* Protocol buffers are ideal for any situation in which you need to serialize structured, record-like, typed data in a language-neutral, platform-neutral, extensible manner.
-* They are most often used for defining communications protocols (together with gRPC) and for data storage.
-* As long as you follow some simple practices when updating .proto definitions, old code will read new messages without issues, ignoring any newly added fields.
-    * To the old code, fields that were deleted will have their default value, and deleted repeated fields will be empty.
-* Message fields can be one of the following:
-
-  singular: a well-formed message can have zero or one of this field (but not more than one). When using proto3 syntax, this is the default field rule when no other field rules are specified for a given field. You cannot determine whether it was parsed from the wire. It will be serialized to the wire unless it is the default value. For more on this subject, see Field Presence.
-  optional: the same as singular, except that you can check to see if the value was explicitly set. An optional field is in one of two possible states:
-  the field is set, and contains a value that was explicitly set or parsed from the wire. It will be serialized to the wire.
-  the field is unset, and will return the default value. It will not be serialized to the wire.
-  repeated: this field type can be repeated zero or more times in a well-formed message. The order of the repeated values will be preserved.
-  map: this is a paired key/value field type. See Maps for more on this field type.
-* Enumerations
-    enum Corpus {
-      CORPUS_UNSPECIFIED = 0;
-      CORPUS_UNIVERSAL = 1;
-      CORPUS_WEB = 2;
-      CORPUS_IMAGES = 3;
-      CORPUS_LOCAL = 4;
-      CORPUS_NEWS = 5;
-      CORPUS_PRODUCTS = 6;
-      CORPUS_VIDEO = 7;
+* are a combination of
+    * the definition language (created in `.proto` files)
+    * the code that the proto compiler generates to interface with data
+    * language-specific runtime libraries
+    * the serialization format for data that is written to a file (or sent across a network connection)
+* are language-neutral, platform-neutral extensible mechanism for serializing structured data
+* like JSON
+    * but smaller, faster, and it generates native language bindings
+* you define how you want your data to be structured
+    * example
+        ```
+        message SearchRequest {
+          string query = 1;
+        }
+        ```
+    * then you can use special generated source code
+        * to easily write and read your structured data to and from a variety of data streams
+        * and using a variety of languages
+* most often used for defining communications protocols (together with gRPC) and for data storage
+* protocol buffers mechanics
+    * ![alt text](img/overview.png)
+* message fields types
+    * `.proto` file
+        ```
+        message Example {
+          string name = 1;
+          optional string additionalDetails = 2;
+          repeated int32 accounts = 3;
+          map<string, int32> movieTicketPrice = 4;
+        }
+        ```
+    * then after compilation
+        ```
+        Example(name = "A", additionalDetails = Some("1"), accounts = List(1), movieTicketPrice = Map("1" -> 10))
+        ```
+    * singular
+        * default field rule
+        * zero or one of this field (but not more than one)
+        * singular just means: not "repeated"
+    * optional
+        * beginning in protobuf v3.14, primitive fields can distinguish between the default value and unset value
+        by using the optional keyword, although this is generally discouraged
+        * the same as singular
+            * except that you can check to see if the value was explicitly set
+        * entire point is to be able to distinguish between
+            * no value was specified for field Foo
+            * the field Foo was explicitly assigned the value that happens to be the proto3 default
+            * without optional: the above both look identical (which is to say: the field is omitted)
+                * if you don't need to distinguish between those two scenarios: you don't need optional
+        * in one of two possible states:
+            * set = contains a value that was explicitly set or parsed from the wire
+                * it will be serialized to the wire
+            * unset
+                * will return the default value
+                * will not be serialized to the wire
+    * repeated
+        * can be repeated zero or more times in a well-formed message
+    * map
+        * paired key/value field type
+* enumerations
+    ```
+    enum CardinalDirection {
+      WEST = 0;
     }
 
-    message SearchRequest {
-      string query = 1;
-      int32 page_number = 2;
-      int32 result_per_page = 3;
-      Corpus corpus = 4;
+    message Move {
+      CardinalDirection direction = 1;
     }
-* You can use other message types as field types.
+    ```
+* other message types as field types
+    ```
     message SearchResponse {
       repeated Result results = 1;
     }
@@ -69,23 +117,38 @@
       string title = 2;
       repeated string snippets = 3;
     }
-   * In the above example, the Result message type is defined in the same file as SearchResponse – what if the message type you want to use as a field type is already defined in another .proto file?
-    * import "myproject/other_protos.proto";
-* It’s very simple to update message types without breaking any of your existing code
-    * Don’t change the field numbers for any existing fields.
-    * Fields can be removed, as long as the field number is not used again in your updated message type.
-        * You may want to rename the field instead, perhaps adding the prefix “OBSOLETE_”
-* How do Protocol Buffers Work
-    * img here
-* Reserved Fields
-    * If you update a message type by entirely removing a field, or commenting it out, future users can reuse the field number when making their own updates to the type.
-    * This can cause severe issues if they later load old versions of the same .proto, including data corruption, privacy bugs, and so on.
-    * One way to make sure this doesn’t happen is to specify that the field numbers (and/or names, which can also cause issues for JSON serialization) of your deleted fields are reserved
-* Packages
-    * You can add an optional package specifier to a .proto file to prevent name clashes between protocol message types.
+    ```
+    * if the message is defined in another proto file, you have to use import `"myproject/other_protos.proto";`
+* updating messages
+    * very simple to update message types without breaking any of your existing code
+    * rule: don’t change the field numbers for any existing fields
+    * fields can be removed, as long as the field number is not used again in your updated message type
+        * problem: future users can reuse the field number when making their own updates to the type
+            * can cause severe issues if they later load old versions of the same `.proto`
+                * including data corruption, privacy bugs, and so on
+        * advice
+            * rename the field instead, perhaps adding the prefix “OBSOLETE_”
+            * specify that the field numbers of your deleted fields are reserved
+                ```
+                message Stock {
+                    reserved 3, 4;
+                    int32 id = 1;
+                    string symbol = 2;
+                }
+                ```
+* packages
+    * prevent name clashes between protocol message types
+        * classes will be placed in a namespace of the same name
+    * example
+        ```
         package foo.bar;
         message Open { ... }
-* Options
+        ```
+* options
+    * example
+        ```
+
+        ```
     * Individual declarations in a .proto file can be annotated with a number of options.
     * Here are a few of the most commonly used options:
         * java_package (file option): The package you want to use for your generated Java/Kotlin classes. If no explicit java_package option is given in the .proto file, then by default the proto package (specified using the “package” keyword in the .proto file) will be used. However, proto packages generally do not make good Java packages since proto packages are not expected to start with reverse domain names. If not generating Java or Kotlin code, this option has no effect.
@@ -97,9 +160,14 @@
         * java_multiple_files (file option): If false, only a single .java file will be generated for this .proto file, and all the Java classes/enums/etc. generated for the top-level messages, services, and enumerations will be nested inside of an outer class (see java_outer_classname). If true, separate .java files will be generated for each of the Java classes/enums/etc. generated for the top-level messages, services, and enumerations, and the wrapper Java class generated for this .proto file won’t contain any nested classes/enums/etc. This is a Boolean option which defaults to false. If not generating Java code, this option has no effect.
 
           option java_multiple_files = true;
-
+* As long as you follow some simple practices when updating .proto definitions, old code will read new messages without issues, ignoring any newly added fields.
+    * To the old code, fields that were deleted will have their default value, and deleted repeated fields will be empty.
 
 ## grpc
+* https://github.com/grpc/grpc-java/issues/515#issuecomment-110023227
+    * Status is for a canonical status used by all gRPC servers and will only rarely be added to. I think you saw the comment "If new codes are added over time they must choose a numerical value that does not collide with any previously used value." This comment is not referring to applications adding codes, but gRPC as a whole adding new codes. The current set of codes should be able to appropriately describe almost any application status in a generic way.
+
+      For custom status information, use Metadata.
 * gRPC uses HTTP/2 protocol which empowers its features such as: bidirectional binary communication, compression, flow control, compiled and strongly typed,  along with others.
 * In gRPC, a client application can directly call a method on a server application on a different machine as if it were a local object, making it easier for you to create distributed applications and services.
     * As in many RPC systems, gRPC is based around the idea of defining a service, specifying the methods that can be called remotely with their parameters and return types. On the server side, the server implements this interface and runs a gRPC server to handle client calls. On the client side, the client has a stub (referred to as just a client in some languages) that provides the same methods as the server.
