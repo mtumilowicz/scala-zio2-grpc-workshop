@@ -2,8 +2,8 @@ package server.service
 
 import io.grpc.document.document.{DocumentIdApiInput, NewDocumentApiInput}
 import zio.stream.ZStream
-import zio.{Scope, ZIO}
 import zio.test.{Spec, TestEnvironment, ZIOSpecDefault, assertTrue}
+import zio.{Scope, ZIO}
 
 object DocumentServiceSpec extends ZIOSpecDefault {
   override def spec: Spec[TestEnvironment with Scope, Any] = suite("crud")(
