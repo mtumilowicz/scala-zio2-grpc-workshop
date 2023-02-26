@@ -270,7 +270,7 @@
     * configurable using the `Compile / PB.protoSources setting`
 * running the compile command in sbt will generate Scala sources for your protos and compile them
 * configuration
-    * add sbt-protoc compiler plugin and ScalaPB Protobuf plugin dependencies to the plugins.sbt file
+    * add `sbt-protoc` compiler plugin and ScalaPB Protobuf plugin dependencies to the `plugins.sbt` file
         ```
         addSbtPlugin("com.thesamet" % "sbt-protoc" % "1.0.6")
 
@@ -299,52 +299,36 @@
 * easily cancel RPCs by calling interrupt on the effect
     * server will immediately abort execution
 * generates code into the same Scala package that ScalaPB uses
-* when you compile the application in SBT (using compile), an SBT plugin named sbt-protoc invokes two code generators.
-    * The first code generator is ScalaPB which generates case classes for all messages and some gRPC-related code that ZIO-gRPC interfaces with
-    * The second generator is ZIO gRPC code generator, which generates a ZIO interface to your service.
-        * example: contains ZIO accessor methods that clients can use to talk to a RouteGuide server
-* Creating the server
-    * There are two parts to making our RouteGuide service do its job:
-
-      Implementing the trait ZRouteGuide generated from our service definition: returning the ZIO effects that do the actual "work" of our service.
-      Putting an instance of ZRouteGuide behind a gRPC server to listen for requests from clients and return the service responses.
-* Starting the server
-  * RouteGuideServer extends ServerMain
-  * ZIO gRPC provides a base trait to quickly set up gRPC services with zero boilerplate.
-
-    We override the port we are going to use (default is 9000)
-    Create an effect that constructs an instance of our service (we need an effectful construction since our service constructor takes a zio.Ref)
-    Override def services to return a ServiceList that contains our service.
-    * ServerMain is meant to be used for simple applications. If you need to do more in your initialization, you can take a look at the source code of ServerMain and customize
-* Instantiating a client
-    * Use RouteGuideClient.live to create a ZLayer that can be used to provide a client as a singleton to our program through the environment. In that case, throughout the program we use accessor methods, defined statically in RouteGuideClient that expect the client to be available in the environment.
-    * A single ZManagedChannel represent a virtual connection to a conceptual endpoint to perform RPCs.
-        * A channel can have many actual connection to the endpoint
-        * Therefore, it is very common to have a single service client for each RPC service you need to connect to
 * easy request cancellations via fiber interrupts
 * Context = Headers (Metadata)
-    * https://scalapb.github.io/zio-grpc/docs/next/context
-
-## installation
-* addSbtPlugin("com.thesamet" % "sbt-protoc" % "1.0.2")
-
-  libraryDependencies +=
-    "com.thesamet.scalapb.zio-grpc" %% "zio-grpc-codegen" % "0.5.0"
-* Then, add the following lines to your build.sbt:
-    PB.targets in Compile := Seq(
-        scalapb.gen(grpc = true) -> (sourceManaged in Compile).value / "scalapb",
+* configuration
+    * set up the ScalaPB code generator alongside the ZIO gRPC code generator
+    * `plugins.sbt` = ScalaPB config plus `zio-grpc-codegen` lib
+        ```
+        libraryDependencies +=
+          "com.thesamet.scalapb.zio-grpc" %% "zio-grpc-codegen" % version
+        ```
+    * `build.sbt` = ScalaPB config plus ZIO code gen step
+        ```
         scalapb.zio_grpc.ZioCodeGenerator -> (sourceManaged in Compile).value / "scalapb"
-    )
-
-    libraryDependencies ++= Seq(
-        "io.grpc" % "grpc-netty" % "1.41.0",
-        "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapb.compiler.Version.scalapbVersion
-    )
-* This configuration will set up the ScalaPB code generator alongside the ZIO gRPC code generator.
-    * Upon compilation, the source generator will process all proto files under src/main/protobuf
-    * The ScalaPB generator will generate case classes for all messages as well as methods to serialize and deserialize those messages.
-    * the ZIO gRPC code generator will generate code as described in the generated code section.
-        * For each proto file that contains services definition, ZIO gRPC generates a Scala object that will contain service definitions for all services in that file.
-        * The object name would be the proto file name prefixed with Zio
-        * it would reside in the same Scala package that ScalaPB will use for definitions in that file.
-
+        ```
+* SBT plugin named `sbt-protoc` invokes two code generators
+    * first: ScalaPB
+        * generates case classes for all messages and some gRPC-related code that ZIO-gRPC interfaces with
+    * second: ZIO gRPC code generator
+        * generates a ZIO interface to your service
+            * example: contains ZIO accessor methods that clients can use to talk to a RouteGuide server
+* starting the server
+    * `ServerMain` trait
+        * used for simple applications
+            * override the port (default is 9000)
+            * override def services to return a ServiceList that contains our service
+                ```
+                ServiceList.addFromEnvironment[SomeService].provideLayer(SomeService.layer)
+                ```
+        * more control => take a look at the source code of `ServerMain` and customize
+* instantiating a client
+    * use `SomeClient.live(ZManagedChannel)` to create a `ZLayer` that can be used to provide a client
+        * `ZManagedChannel` represent a virtual connection to a conceptual endpoint to perform RPCs
+            * channel can have many actual connection to the endpoint
+            * it is very common to have a single service client for each RPC service you need to connect to
