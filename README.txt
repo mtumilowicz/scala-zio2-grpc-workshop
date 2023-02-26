@@ -18,6 +18,7 @@
     * https://learn.microsoft.com/en-us/dotnet/architecture/grpc-for-wcf-developers/protobuf-reserved
     * https://codethecoffee.github.io/proto-cheatsheet/
     * https://github.com/grpc/grpc-java/issues/515#issuecomment-110023227
+    * https://medium.com/rahasak/reactive-microservices-with-grpc-and-scala-e4767ca2d34a
 
 ## preface
 * this project, for the sake of simplicity - has very basic setup
@@ -251,8 +252,6 @@
 * both the client and server make independent and local determinations of the success of the call, and their conclusions may not match
     * RPC that finished successfully on the server side can fail on the client side
     * example: the server can send the response, but the reply can arrive at the client after their deadline has expired
-* Metadata
-    * Metadata is information about a particular RPC call (such as authentication details) in the form of a list of key-value pairs, where the keys are strings and the values are typically strings, but can be binary data.
 * deadlines
     * are absolute timestamps that tell our system when the response of an RPC call is no longer needed
     * is sent to the server
@@ -260,14 +259,47 @@
             * client call automatically ends with a `Status.DEADLINE_EXCEEDED` error
     * allow gRPC clients to specify how long they are willing to wait for an RPC to complete
         * when you don't specify a deadline, client requests never timeout
+* Metadata
+    * information about a particular RPC call (such as authentication details)
+    * list of key-value pairs, where the keys are strings and the values are typically strings, but can be binary data
 
+## ScalaPB
+* is a protocol buffer compiler (protoc) plugin for Scala
+* generate Scala case classes, parsers and serializers for your protocol buffers
+* will look for protocol buffer (`.proto`) files under `src/main/protobuf`
+    * configurable using the `Compile / PB.protoSources setting`
+* running the compile command in sbt will generate Scala sources for your protos and compile them
+* configuration
+    * add sbt-protoc compiler plugin and ScalaPB Protobuf plugin dependencies to the plugins.sbt file
+        ```
+        addSbtPlugin("com.thesamet" % "sbt-protoc" % "1.0.6")
+
+        libraryDependencies ++= Seq("com.thesamet.scalapb" %% "compilerplugin" % "0.11.13")
+        ```
+        * `sbt-protoc` plugin used `protoc` to generate code from Protobuf files
+    * `build.sbt` needs to define the instructions to compile Protobuf definitions into Scala codes
+        * compiles protobuf to scala code
+        ```
+            PB.targets in Compile := Seq(
+              scalapb.gen() -> (sourceManaged in Compile).value
+            )
+        ```
+        * libs
+            ```
+            libraryDependencies ++= {
+              Seq(
+                "io.grpc"                         % "grpc-netty"                      % com.trueaccord.scalapb.compiler.Version.grpcJavaVersion,
+                "com.trueaccord.scalapb"          %% "scalapb-runtime"                % com.trueaccord.scalapb.compiler.Version.scalapbVersion % "protobuf",
+              )
+            }
+            ```
 ## zio-grpc
-* ZIO-gRPC lets you write purely functional gRPC servers and clients
-* Supports all types of RPCs (unary, client streaming, server streaming, bidirectional)
-* Cancellable RPCs: easily cancel RPCs by calling interrupt on the effect. Server will immediately abort execution.
-* ZIO gRPC generates code into the same Scala package that ScalaPB uses
-    * Since java_package is specified, the Scala package will be the java_package with the proto file name appended to it
-* When you compile the application in SBT (using compile), an SBT plugin named sbt-protoc invokes two code generators.
+* lets you write purely functional gRPC servers and clients
+* supports all types of RPCs (unary, client streaming, server streaming, bidirectional)
+* easily cancel RPCs by calling interrupt on the effect
+    * server will immediately abort execution
+* generates code into the same Scala package that ScalaPB uses
+* when you compile the application in SBT (using compile), an SBT plugin named sbt-protoc invokes two code generators.
     * The first code generator is ScalaPB which generates case classes for all messages and some gRPC-related code that ZIO-gRPC interfaces with
     * The second generator is ZIO gRPC code generator, which generates a ZIO interface to your service.
         * example: contains ZIO accessor methods that clients can use to talk to a RouteGuide server
@@ -316,34 +348,3 @@
         * The object name would be the proto file name prefixed with Zio
         * it would reside in the same Scala package that ScalaPB will use for definitions in that file.
 
-## ScalaPB
-* ScalaPB is a protocol buffer compiler (protoc) plugin for Scala. It will generate Scala case classes, parsers and serializers for your protocol buffers.
-* To automatically generate Scala case classes for your messages add ScalaPB's sbt plugin to your project. Create a file named project/scalapb.sbt containing the following lines:
-
-  addSbtPlugin("com.thesamet" % "sbt-protoc" % "1.0.3")
-
-  libraryDependencies += "com.thesamet.scalapb" %% "compilerplugin" % "0.11.11"
-* Add the following line to your build.sbt:
-
-  Compile / PB.targets := Seq(
-    scalapb.gen() -> (Compile / sourceManaged).value / "scalapb"
-  )
-  // (optional) If you need scalapb/scalapb.proto or anything from
-  // google/protobuf/*.proto
-  libraryDependencies ++= Seq(
-      "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf"
-  )
-* ScalaPB will look for protocol buffer (.proto) files under src/main/protobuf, which can be customized.
-* running the compile command in sbt will generate Scala sources for your protos and compile them.
-* The .proto file starts with a package declaration, which helps to prevent naming conflicts between different projects. In Scala, the package name followed by the file name is used as the Scala package unless you have either explicitly specified a java_package
-* Each field must be annotated with one of the following modifiers:
-
-  required: a value for the field must be provided when constructing a message case class. Parsing a message that misses a required field will throw an InvalidProtocolBufferException. Other than this, a required field behaves exactly like an optional field.
-  optional: the field may or may not be set. If an optional field value isn't set, a default value is used. For simple types, you can specify your own default value, as we've done for the phone number type in the example. Otherwise, a system default is used: zero for numeric types, the empty string for strings, false for bools. For embedded messages, the default value is always the "default instance" or "prototype" of the message, which has none of its fields set. Calling the accessor to get the value of an optional (or required) field which has not been explicitly set always returns that field's default value. In proto2, optional fields are represented as Option[]. In proto3, optional primitives are not wrapped in Option[], but messages are.
-  repeated: the field may be repeated any number of times (including zero). The order of the repeated values will be preserved in the protocol buffer. Think of repeated fields as dynamically sized arrays. They are represented in Scala as Seqs.
-* The plugin assumes your proto files are under src/main/protobuf, however this is configurable using the Compile / PB.protoSources setting.
-* gRPC Libraries for ScalaPB
-    * libraryDependencies ++= Seq(
-          "io.grpc" % "grpc-netty" % scalapb.compiler.Version.grpcJavaVersion,
-          "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapb.compiler.Version.scalapbVersion
-      )
