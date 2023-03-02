@@ -206,6 +206,10 @@
 * gRPC library takes care of communication, marshalling, unmarshalling, and deadline enforcement
 * uses HTTP/2
    * POST method
+   * response status is always 200
+* data is carried using data frames
+   * we have `endStream` flag to know if current frame is the last frame of the message
+   * we have `streamId` to differentiate between producers (usually frames are sent using the same channel)
 * by default, gRPC uses Protocol Buffers
     * gRPC uses protocol buffer compiler protoc with a special gRPC plugin to generate code from your proto file
         * you get generated gRPC client and server code
