@@ -207,6 +207,7 @@
 * uses HTTP/2
    * POST method
    * response status is always 200
+      * instead we have `grpc-status` in header to carry the result
 * data is carried using data frames
    * we have `endStream` flag to know if current frame is the last frame of the message
    * we have `streamId` to differentiate between producers (usually frames are sent using the same channel)
