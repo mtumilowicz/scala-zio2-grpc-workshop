@@ -20,6 +20,7 @@
     * https://codethecoffee.github.io/proto-cheatsheet/
     * https://github.com/grpc/grpc-java/issues/515#issuecomment-110023227
     * https://medium.com/rahasak/reactive-microservices-with-grpc-and-scala-e4767ca2d34a
+    * [gRPC Cornerstone: HTTP2… or HTTP3? by Mykyta Protsenko & Alex Borysov](https://www.youtube.com/watch?v=rBQNGxUGhR0)
 
 ## preface
 * this project, for the sake of simplicity - has very basic setup
@@ -204,6 +205,7 @@
                     send the requests to the server, and return the server’s protocol buffer responses
 * gRPC library takes care of communication, marshalling, unmarshalling, and deadline enforcement
 * uses HTTP/2
+   * POST method
 * by default, gRPC uses Protocol Buffers
     * gRPC uses protocol buffer compiler protoc with a special gRPC plugin to generate code from your proto file
         * you get generated gRPC client and server code
