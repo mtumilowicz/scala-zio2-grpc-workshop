@@ -208,6 +208,8 @@
    * POST method
    * response status is always 200
       * instead we have `grpc-status` in header to carry the result
+   * http/2 multiplexing limitation
+      * tcp does not have a notion about http stream, so if some package has to be resend, all other packets have to wait (even if they come from other stream)
 * data is carried using data frames
    * we have `endStream` flag to know if current frame is the last frame of the message
    * we have `streamId` to differentiate between producers (usually frames are sent using the same channel)
